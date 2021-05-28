@@ -103,7 +103,7 @@ def PredictCrop():
         response = {'crop': str(crop_name)}
         response = json.dumps(response)
         try:
-            user_api1="6LdWHeIaAAAAAC5LhQfCr8sdIJhffpAA-fsS22aS"
+            user_api1="6LeLmPcaAAAAAKBX4jmPoVHisKmIIXImG5ANRrA7"
             locatio=request.form["g-recaptcha"]
             api_link1="https://www.google.com/recaptcha/api/siteverify?secret="+user_api1+"&response="+locatio
             api_data_comp1=requests.get(api_link1)
