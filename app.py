@@ -4,6 +4,7 @@ from flask import render_template
 import logging
 import pickle
 import pandas as pd
+import numpy as np
 from datetime import datetime
 import random
 import json
@@ -22,6 +23,29 @@ crop_name = ""
 @app.route('/crop_predict',methods = ['GET','POST'])
 def PredictCrop():
     try:
+        user_api="a63eabe6f13509c1a830f1c4238d7a03"
+        # location=input("enter the city")
+        location=request.form["Location"]
+        api_link="https://api.openweathermap.org/data/2.5/weather?q="+location+"&appid="+user_api
+        api_data_comp=requests.get(api_link)
+        api_data=api_data_comp.json()
+        temp=math.floor((api_data['main']['temp']) -273.15)
+        hum=(api_data['main']['humidity'])
+    except:
+        temp,hum=25,30
+    try:
+        location=location.upper()
+        rf=pd.read_csv("Datasets/Rainfall.csv")
+        da=np.asarray(rf)
+        for i in da:
+            if i[0]==location:
+                rainfall=math.floor(float(i[14]/12))
+        for i in da:
+            if i[1]==location:
+                rainfall=math.floor(float(i[14]/12))
+    except:
+        rainfall=222
+    try:
         random.seed(datetime.now())
         global N,P,K,ph
         first = request.form["nitrogen"]
@@ -32,13 +56,13 @@ def PredictCrop():
             K = float(request.form["pottasium"])
             ph = float(request.form["ph"])
             
-            rainfall = float(request.form["rainfall"])
-            hum = float(request.form["humidity"])
-            temp = float(request.form["temperature"])
+#             rainfall = float(request.form["rainfall"])
+#             hum = float(request.form["humidity"])
+#             temp = float(request.form["temperature"])
             
             soilType=request.form["soil_type"]
         except:
-            N,P,K,ph,temp,hum,rainfall,soilType = 2,44,60,5.5,30,22,150,"sandy"
+            N,P,K,ph,soilType = 100,440,600,5.5,"sandy"
         a = {}
         a['N'] = N
         a['P'] = P 
@@ -67,7 +91,7 @@ def PredictCrop():
 
         new_df = pd.DataFrame(a, columns = ['N','P','K','temperature','humidity','ph','rainfall','black','clayey','loamy','red','sandy'],index = [0])
         #print(new_df)
-        NB_pkl_filename = 'RandForest.pkl'
+        NB_pkl_filename = 'RanForest.pkl'
         NB_pkl = open(NB_pkl_filename, 'rb')
         NB_model = pickle.load(NB_pkl)
         global crop_name
@@ -78,10 +102,20 @@ def PredictCrop():
         crop_name = crop_name.title()
         response = {'crop': str(crop_name)}
         response = json.dumps(response)
-        return render_template('crop_res.html', response=crop_name)
+        try:
+            user_api1="6LdWHeIaAAAAAC5LhQfCr8sdIJhffpAA-fsS22aS"
+            locatio=request.form["g-recaptcha"]
+            api_link1="https://www.google.com/recaptcha/api/siteverify?secret="+user_api1+"&response="+locatio
+            api_data_comp1=requests.get(api_link1)
+            api_data1=api_data_comp1.json()
+            if api_data1['success']:
+                return render_template('crop_res.html', response=crop_name)
+            else:
+                return render_template('error.html')
+        except:
+            return render_template('crop_res.html', response=crop_name)
     except Exception as e:
         return "Caught err "+str(e)
-        
 @app.route('/fertilizer_predict',methods = ['GET','POST'])
 def FertRecommend():
     global crop_name
@@ -102,6 +136,9 @@ def FertRecommend():
         nr = 180
         pr = 70
         kr = 40
+        N=10
+        P=20
+        K=10
     # global N,P,K
     n = nr - N
     p = pr - P
@@ -116,13 +153,15 @@ def FertRecommend():
     NB_pk_filename = 'svm_fert.pkl'
     NB_pkl = open(NB_pk_filename, 'rb')
     svm_model = pickle.load(NB_pkl)
-    global fert_name
+    # global fert_name
     
     fert_name = svm_model.predict(new_df1)[0]
+    response = {'fertilizer': str(fert_name)}
+    response = json.dumps(response)
+    return render_template('fer_res.html', response=fert_name)
 
    
-    return render_template('fert_res.html', response=fert_name)
-    
+        
 
 
 
@@ -142,4 +181,3 @@ def fert_pred():
 # app = flask.Flask(__name__)
 if __name__== '__main__':
     app.run(debug=True)
-
